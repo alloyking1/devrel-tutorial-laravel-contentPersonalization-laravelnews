@@ -4,6 +4,7 @@ namespace Database\Factories;
 
 use App\Models\Post;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use App\Services\EmbeddingService;
 
 /**
  * @extends Factory<Post>
@@ -17,7 +18,7 @@ class PostFactory extends Factory
      */
     public function definition(): array
     {
-        $content = [
+        $posts = [
             [
                 'title' => 'Getting Started with Laravel APIs',
                 'body' => "Laravel provides a clean and expressive way to build APIs. With built-in routing, controllers, and request handling, developers can quickly expose endpoints that return structured JSON responses. This makes Laravel a strong choice for building both small services and large-scale backend systems.\n\nIn this guide, we explore how to define API routes, structure controllers, and return consistent responses. We also touch on best practices such as separating business logic from controllers and organizing your API for long-term maintainability.",
@@ -100,7 +101,20 @@ class PostFactory extends Factory
             ],
         ];
 
-        return fake()->randomElement($content);
+        $embeddingService = app(EmbeddingService::class);
+
+        foreach ($posts as $postData) {
+            $text = $postData['title'] . ' ' . $postData['body'];
+            $embedding = $embeddingService->generate($text);
+
+            Post::create([
+                'title' => $postData['title'],
+                'body' => $postData['body'],
+                'embedding' => $embedding,
+            ]);
+        }
+
+        return [];
     }
 
 }

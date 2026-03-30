@@ -1,59 +1,216 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Laravel Content Personalization Demo
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+An open source Laravel 13 demo application that shows how to build article recommendations with MongoDB vector search and AI-generated embeddings.
 
-## About Laravel
+This repository accompanies a tutorial published on Laravel News. It demonstrates a minimal content-personalization workflow where article content is embedded with a Hugging Face model, stored in MongoDB, and queried through a vector index to return semantically similar posts.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## What This Project Does
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+- Stores article content in MongoDB.
+- Generates embeddings for each article through the Hugging Face Inference API.
+- Uses MongoDB vector search to find related posts.
+- Exposes a simple Laravel API endpoint for fetching a post and its recommendations.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+The current demo is intentionally small and API-first. The recommendation flow lives in the backend, and the main example endpoint is:
 
-## Learning Laravel
-
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
-
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
-
-```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+```text
+GET /api/posts/{id}
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+## Tech Stack
+
+- PHP 8.3+
+- Laravel 13
+- MongoDB with the Laravel MongoDB driver
+- MongoDB Atlas Vector Search or another MongoDB deployment that supports `$vectorSearch`
+- Hugging Face Inference API for embeddings
+- Vite and Tailwind CSS 4 for frontend assets
+- SQLite for Laravel framework tables such as sessions, cache, jobs, and personal access tokens
+
+## How It Works
+
+1. Seed content is defined in the post factory.
+2. During seeding, the app sends each post's title and body to the configured Hugging Face embedding endpoint.
+3. The returned embedding is stored alongside the post document in MongoDB.
+4. When you request a post by ID, the app runs a MongoDB `$vectorSearch` query against the `embedding` field.
+5. The API returns the selected post plus a list of recommended posts.
+
+## Prerequisites
+
+Before running the project locally, make sure you have:
+
+- PHP 8.3 or newer
+- Composer
+- Node.js 20+ and npm
+- A MongoDB database
+- A Hugging Face API key
+- A Hugging Face embedding model endpoint URL
+
+## Local Setup
+
+### 1. Clone and install dependencies
+
+```bash
+git clone <your-fork-or-repo-url>
+cd devrel-tutorial-laravel-contentPersonalization-laravelnews
+composer install
+npm install
+```
+
+### 2. Create the environment file
+
+```bash
+cp .env.example .env
+php artisan key:generate
+```
+
+### 3. Create the SQLite database used by Laravel infrastructure
+
+This project uses MongoDB for article data, but the default Laravel tables still use SQLite.
+
+```bash
+touch database/database.sqlite
+```
+
+### 4. Configure environment variables
+
+Update `.env` with values like these:
+
+```dotenv
+APP_NAME="Laravel Content Personalization Demo"
+APP_URL=http://127.0.0.1:8000
+
+DB_CONNECTION=sqlite
+DB_DATABASE=/absolute/path/to/this/project/database/database.sqlite
+
+MONGODB_URI="your-mongodb-connection-string"
+MONGODB_DATABASE="your-database-name"
+
+HUGGINGFACE_API_KEY="your-hugging-face-api-key"
+HUGGINGFACE_API_URL="https://api-inference.huggingface.co/pipeline/feature-extraction/<model-name>"
+```
+
+Notes:
+
+- Keep `DB_CONNECTION=sqlite` unless you also rework the Laravel framework tables.
+- `MONGODB_URI` and `MONGODB_DATABASE` are used by the `mongodb` connection configured in the app.
+- `HUGGINGFACE_API_URL` must point to an embedding-capable endpoint that returns a numeric vector for the provided text.
+
+### 5. Run migrations
+
+```bash
+php artisan migrate
+```
+
+### 6. Seed the demo content
+
+Seeding generates embeddings through the Hugging Face API, so your MongoDB and Hugging Face settings must already be valid.
+
+```bash
+php artisan db:seed
+```
+
+### 7. Create the MongoDB vector index
+
+The recommendation query expects a vector index named `vector_index` on the `embedding` field in the `posts` collection.
+
+You need to create that index in MongoDB Atlas or your supported MongoDB deployment before recommendations will work.
+
+The embedding dimensions in the index must match the length of the vectors returned by your configured Hugging Face model.
+
+### 8. Start the application
+
+For local development:
+
+```bash
+composer run dev
+```
+
+This starts:
+
+- The Laravel development server
+- The queue listener
+- Laravel Pail log streaming
+- The Vite dev server
+
+If you only want the backend API, you can run:
+
+```bash
+php artisan serve
+```
+
+## API Usage
+
+### Get a post with recommendations
+
+```bash
+curl http://127.0.0.1:8000/api/posts/<post-id>
+```
+
+Example response:
+
+```json
+{
+    "post": {
+        "title": "Getting Started with Laravel APIs",
+        "body": "..."
+    },
+    "recommendations": [
+        {
+            "id": "67f...",
+            "title": "Building REST APIs in Laravel"
+        }
+    ]
+}
+```
+
+## Useful Commands
+
+```bash
+composer run dev
+composer run test
+php artisan migrate
+php artisan db:seed
+npm run dev
+npm run build
+```
+
+## Project Structure
+
+- `app/Http/Controllers/PostController.php`: Recommendation API endpoint
+- `app/Models/Post.php`: MongoDB-backed post model
+- `app/Services/EmbeddingService.php`: Hugging Face API integration
+- `database/factories/PostFactory.php`: Demo content plus embedding generation during seeding
+- `database/seeders/PostSeeder.php`: Seeds posts into MongoDB
+- `routes/api.php`: API route definitions
+
+## Troubleshooting
+
+### `php artisan db:seed` fails
+
+Check the following:
+
+- Your Hugging Face API key is valid.
+- Your Hugging Face endpoint URL is correct.
+- Your MongoDB connection string and database name are valid.
+- Your embedding endpoint returns a single numeric vector in the format expected by the app.
+
+### Recommendation requests fail with a vector search error
+
+Usually this means one of the following:
+
+- The `vector_index` index does not exist.
+- The index dimensions do not match your embedding size.
+- Your MongoDB deployment does not support `$vectorSearch`.
+
+### Migrations fail locally
+
+Make sure `database/database.sqlite` exists and that `.env` still points `DB_CONNECTION` to `sqlite`.
 
 ## Contributing
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
-
-## Code of Conduct
-
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
-
-## Security Vulnerabilities
-
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+Issues and pull requests are welcome. If you improve the setup, documentation, or recommendation flow, contributions are open.
 
 ## License
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
-# devrel-tutorial-laravel-contentPersonalization-laravelnews
+This project is open source software licensed under the MIT License.

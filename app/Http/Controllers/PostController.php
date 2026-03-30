@@ -45,7 +45,6 @@ class PostController extends Controller
         // 4. Return structured response
         return response()->json([
             'post' => [
-                // 'id' => (string) $post->_id,
                 'title' => $post->title,
                 'body' => $post->body,
             ],

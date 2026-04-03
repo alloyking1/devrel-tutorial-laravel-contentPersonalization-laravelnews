@@ -4,6 +4,8 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use App\Models\Post;
+use App\Data\PostData;
+use App\Services\EmbeddingService;
 
 class PostSeeder extends Seeder
 {
@@ -12,6 +14,19 @@ class PostSeeder extends Seeder
      */
     public function run(): void
     {
-        Post::factory()->create();
+        $embeddingService = app(EmbeddingService::class);
+        $postData = PostData::all();
+
+        foreach ($postData as $post) {
+
+            $text = $post['title'] . ' ' . $post['body'];
+            $embedding = $embeddingService->generate($text);
+
+            Post::factory()->create([
+                'title' => $post['title'],
+                'body' => $post['body'],
+                'embedding' => $embedding,
+            ]);
+        }
     }
 }

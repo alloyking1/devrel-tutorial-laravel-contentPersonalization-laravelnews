@@ -35,7 +35,7 @@ return [
         'mongodb' => [
             'driver' => 'mongodb',
             'dsn' => env('MONGODB_URI'),
-            'database' => env('MONGODB_DATABASE'),
+            'database' => env('MONGODB_DATABASE').'/?appName=devrel-github-laravelnews-contentPersonalization',
         ],
 
         'sqlite' => [
